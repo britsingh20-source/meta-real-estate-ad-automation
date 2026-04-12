@@ -1,0 +1,42 @@
+name: 📥 Pull Meta Leads (Every 2 Hours)
+
+on:
+  schedule:
+    # Runs every 2 hours during Indian business hours (6 AM–10 PM IST)
+    - cron: "0 0,2,4,6,8,10,12,14,16 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  pull-leads:
+    name: Fetch New Leads from Meta Lead Forms
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull leads from Meta
+        env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+        run: python main.py --action pull_leads
+
+      - name: Upload leads CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: leads-${{ github.run_id }}
+          path: leads/*.csv
+          retention-days: 90

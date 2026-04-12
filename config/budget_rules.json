@@ -1,0 +1,34 @@
+{
+  "_comment": "Budget and bidding rules for the optimizer. All amounts in INR.",
+
+  "total_daily_budget_inr": 200,
+
+  "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+
+  "_bid_strategy_options": [
+    "LOWEST_COST_WITHOUT_CAP   — Meta auto-bids, cheapest leads first (recommended for new campaigns)",
+    "LOWEST_COST_WITH_BID_CAP  — You set a max bid per event",
+    "COST_CAP                  — You set a target cost per result"
+  ],
+
+  "max_cpl_inr": 150,
+  "_max_cpl_note": "If CPL exceeds ₹150, pause the ad set immediately.",
+
+  "target_cpl_inr": 80,
+  "_target_cpl_note": "If CPL is below ₹80, scale up this ad set's budget.",
+
+  "scale_factor": 1.3,
+  "_scale_factor_note": "Multiply budget by 1.3 (30% increase) when scaling a winner.",
+
+  "scale_cap_inr": 80,
+  "_scale_cap_note": "Never let a single ad set go above ₹80/day even after scaling.",
+
+  "min_spend_before_eval_inr": 30,
+  "_min_spend_note": "Don't evaluate or pause an ad set until it has spent at least ₹30 today.",
+
+  "optimizer_run_interval_hours": 4,
+  "_interval_note": "GitHub Actions triggers the optimizer every 4 hours.",
+
+  "pause_all_if_total_spend_exceeds_inr": 200,
+  "_hard_cap_note": "Emergency kill-switch: pause every active ad set if total daily spend hits ₹200."
+}

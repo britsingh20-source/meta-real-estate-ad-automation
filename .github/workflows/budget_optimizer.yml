@@ -1,0 +1,48 @@
+name: 💰 Budget Optimizer (Every 4 Hours)
+
+on:
+  schedule:
+    # Runs every 4 hours — checks spend, pauses bad adsets, scales winners
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+    inputs:
+      campaign_id:
+        description: "Campaign ID to optimize (overrides env default)"
+        required: false
+
+jobs:
+  optimize-budget:
+    name: Optimize Ad Set Budgets & CPL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run budget optimizer
+        env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_CAMPAIGN_ID: ${{ secrets.META_CAMPAIGN_ID }}
+          CAMPAIGN_ID_OVERRIDE: ${{ github.event.inputs.campaign_id }}
+        run: python main.py --action optimize
+
+      - name: Upload optimizer report
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimizer-report-${{ github.run_id }}
+          path: reports/optimizer_*.json
+          retention-days: 30

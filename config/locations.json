@@ -1,0 +1,74 @@
+{
+  "_comment": "Define location groups for real estate targeting. Each group becomes one Ad Set.",
+  "audience_defaults": {
+    "age_min": 25,
+    "age_max": 55,
+    "genders": [0],
+    "publisher_platforms": ["facebook", "instagram"],
+    "facebook_positions": ["feed", "marketplace"],
+    "instagram_positions": ["stream", "story", "reels"],
+    "interests": [
+      {"id": "6003629266583", "name": "Real estate"},
+      {"id": "6003397425735", "name": "Property investment"},
+      {"id": "6003348604961", "name": "Home ownership"},
+      {"id": "6002714886772", "name": "Apartments"},
+      {"id": "6003206403550", "name": "Residential area"}
+    ],
+    "behaviors": [
+      {"id": "6015559470583", "name": "Likely to move"},
+      {"id": "6002714898572", "name": "Real estate-related browsers"}
+    ],
+    "exclusions": []
+  },
+
+  "location_groups": [
+    {
+      "_comment": "Mode 1: City-level targeting — uses Meta city keys",
+      "name": "Coimbatore City Core",
+      "mode": "city",
+      "daily_budget_inr": 80,
+      "targets": [
+        { "meta_city_key": "2256748", "label": "Coimbatore", "radius_km": 15 }
+      ],
+      "location_types": ["home", "recent"],
+      "audience_override": {
+        "age_min": 28,
+        "age_max": 52
+      }
+    },
+    {
+      "_comment": "Mode 2: Radius targeting — hyper-local around project site",
+      "name": "RS Puram / Saibaba Colony Radius",
+      "mode": "radius",
+      "daily_budget_inr": 70,
+      "targets": [
+        {
+          "lat": 11.0168,
+          "lng": 76.9558,
+          "radius_km": 8,
+          "label": "RS Puram, Coimbatore"
+        },
+        {
+          "lat": 11.0215,
+          "lng": 76.9629,
+          "radius_km": 6,
+          "label": "Saibaba Colony, Coimbatore"
+        }
+      ],
+      "location_types": ["home"]
+    },
+    {
+      "_comment": "Mode 3: Pin-code targeting — surgical area selection",
+      "name": "Premium PIN Codes",
+      "mode": "pincode",
+      "daily_budget_inr": 50,
+      "targets": [
+        {
+          "label": "Coimbatore Premium Zones",
+          "pincodes": ["641002", "641011", "641018", "641025", "641035", "641045"]
+        }
+      ],
+      "location_types": ["home", "recent"]
+    }
+  ]
+}

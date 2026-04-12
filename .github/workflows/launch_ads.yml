@@ -1,0 +1,48 @@
+name: 🚀 Launch Meta Ads (Daily)
+
+on:
+  schedule:
+    # Runs every day at 7:00 AM IST (01:30 UTC)
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+    inputs:
+      lead_form_id:
+        description: "Meta Lead Form ID (overrides env default)"
+        required: false
+
+jobs:
+  launch-ads:
+    name: Create Campaign, AdSets & Ads
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Launch Meta Ads
+        env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_LEAD_FORM_ID: ${{ secrets.META_LEAD_FORM_ID }}
+          LEAD_FORM_ID_OVERRIDE: ${{ github.event.inputs.lead_form_id }}
+        run: python main.py --action launch
+
+      - name: Upload launch report
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-report-${{ github.run_id }}
+          path: reports/launch_*.json
+          retention-days: 30
