@@ -7,7 +7,7 @@
   "cta_type": "GET_QUOTE",
   "_image_note": "Provide EITHER image_hash (from an already-uploaded image) OR image_path (local file to upload). image_hash takes priority.",
   "image_hash": "",
-  "image_path": "assets/property_banner.jpg",
+  "image_path": "assets/property_banner.png",
   "destination_url": "https://www.facebook.com/YOUR_PAGE_ID",
   "_variants_note": "Optional A/B test variants — future feature hook",
   "variants": [
