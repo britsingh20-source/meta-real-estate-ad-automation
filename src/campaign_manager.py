@@ -56,6 +56,7 @@ class CampaignManager:
                 Campaign.Field.objective: "OUTCOME_LEADS",  # Updated from deprecated LEAD_GENERATION
                 Campaign.Field.status: Campaign.Status.active,
                 Campaign.Field.special_ad_categories: [],
+                "is_adset_budget_sharing_enabled": False,   # Required when using adset-level budgets
             }
         ))
         campaign_id = campaign["id"]
