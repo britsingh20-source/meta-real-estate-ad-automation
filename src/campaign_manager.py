@@ -47,13 +47,13 @@ class CampaignManager:
     # ─────────────────────────────────────────────────────────────────────────
 
     def create_campaign(self) -> str:
-        """Creates a LEAD_GENERATION campaign and returns its ID."""
+        """Creates an OUTCOME_LEADS campaign and returns its ID."""
         name = f"{self.ad_config['campaign_name_prefix']} | {datetime.now().strftime('%Y-%m-%d')}"
 
         campaign = self.client.retry(lambda: self.account.create_campaign(
             params={
                 Campaign.Field.name: name,
-                Campaign.Field.objective: Campaign.Objective.lead_generation,
+                Campaign.Field.objective: "OUTCOME_LEADS",  # Updated from deprecated LEAD_GENERATION
                 Campaign.Field.status: Campaign.Status.active,
                 Campaign.Field.special_ad_categories: [],
             }
