@@ -1,25 +1,26 @@
 {
   "_comment": "Ad creative configuration for Real Estate lead gen campaign.",
+
   "campaign_name_prefix": "RE | Lead Gen | Coimbatore",
+
   "headline": "Own Your Dream Home in Coimbatore 🏡",
   "ad_body": "Limited units available! Premium 2BHK & 3BHK apartments starting ₹45L. Prime location, RERA approved. Get FREE site visit today — no commitment needed!",
   "description": "RERA Approved | Ready to Move | Zero Hidden Charges",
+
   "cta_type": "GET_QUOTE",
+
   "_image_note": "Provide EITHER image_hash (from an already-uploaded image) OR image_path (local file to upload). image_hash takes priority.",
   "image_hash": "",
-  "image_path": "assets/property_banner.png",
+  "image_path": "assets/property_banner.jpg",
+
   "destination_url": "https://www.facebook.com/YOUR_PAGE_ID",
+
   "_variants_note": "Optional A/B test variants — future feature hook",
   "variants": [
     {
       "headline": "2BHK Flats in Coimbatore | ₹45L Onwards",
       "ad_body": "RERA certified. 24/7 security. Ready possession. Book free site visit!",
-      "cta_type": "GET_QUOTE"
-    },
-    {
-      "headline": "Dream Home Awaits in Coimbatore 🌟",
-      "ad_body": "Premium apartments at unbeatable prices. RERA approved. Zero hidden charges.",
-      "cta_type": "GET_QUOTE"
+      "cta_type": "BOOK_NOW"
     },
     {
       "headline": "Invest Smart — Property in Coimbatore",
