@@ -6,6 +6,8 @@ for Real Estate lead generation with a ₹200/day total budget cap.
 
 import json
 import logging
+import os
+import glob
 from pathlib import Path
 from datetime import datetime
 from facebook_business.adobjects.campaign import Campaign
@@ -21,8 +23,11 @@ logger = logging.getLogger(__name__)
 
 AD_CONFIG_PATH = Path(__file__).parent.parent / "config" / "ad_config.json"
 BUDGET_RULES_PATH = Path(__file__).parent.parent / "config" / "budget_rules.json"
+ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 TOTAL_DAILY_BUDGET_INR = 200      # ₹200/day hard cap across all ad sets
+
+SUPPORTED_IMAGE_EXTS = (".jpg", ".jpeg", ".png")
 
 
 def load_ad_config() -> dict:
@@ -47,13 +52,13 @@ class CampaignManager:
     # ─────────────────────────────────────────────────────────────────────────
 
     def create_campaign(self) -> str:
-        """Creates a LEAD_GENERATION campaign and returns its ID."""
+        """Creates an OUTCOME_LEADS campaign and returns its ID."""
         name = f"{self.ad_config['campaign_name_prefix']} | {datetime.now().strftime('%Y-%m-%d')}"
 
         campaign = self.client.retry(lambda: self.account.create_campaign(
             params={
                 Campaign.Field.name: name,
-                Campaign.Field.objective: Campaign.Objective.lead_generation,
+                Campaign.Field.objective: "OUTCOME_LEADS",   # Updated: replaces deprecated LEAD_GENERATION
                 Campaign.Field.status: Campaign.Status.active,
                 Campaign.Field.special_ad_categories: [],
             }
@@ -132,8 +137,39 @@ class CampaignManager:
     # 3. Ad Creative
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _find_assets_image(self) -> str | None:
+        """
+        Scans the assets/ folder for image files (.jpg, .jpeg, .png).
+        Returns the path to the most recently modified image, or None if empty.
+        """
+        if not ASSETS_DIR.exists():
+            logger.info("assets/ folder does not exist — skipping.")
+            return None
+
+        images = [
+            p for p in ASSETS_DIR.iterdir()
+            if p.suffix.lower() in SUPPORTED_IMAGE_EXTS and p.is_file()
+        ]
+
+        if not images:
+            logger.info("No images found in assets/ folder.")
+            return None
+
+        # Pick the most recently modified image
+        latest = max(images, key=lambda p: p.stat().st_mtime)
+        logger.info("Using image from assets/: %s", latest.name)
+        return str(latest)
+
     def create_creative(self, lead_form_id: str) -> str:
-        """Builds a single-image lead-gen creative."""
+        """
+        Builds a single-image lead-gen creative.
+
+        Image priority:
+          1. image_hash  — Meta hash of already-uploaded image (fastest)
+          2. image_url   — Hosted URL (no upload needed)
+          3. assets/     — Auto-scan assets/ folder for .jpg/.jpeg/.png
+          4. image_path  — Explicit local path in ad_config.json
+        """
         cfg = self.ad_config
         page_id = self.client.page_id
 
@@ -148,10 +184,35 @@ class CampaignManager:
             },
         }
 
-        # Image hash (upload image first if hash not provided)
-        image_hash = cfg.get("image_hash")
-        if not image_hash and cfg.get("image_path"):
-            image_hash = self._upload_image(cfg["image_path"])
+        image_hash = cfg.get("image_hash", "").strip()
+
+        if not image_hash:
+            if cfg.get("image_url", "").strip():
+                # Priority 2: hosted URL — no upload needed
+                link_data["picture"] = cfg["image_url"].strip()
+                logger.info("Using image_url for creative: %s", cfg["image_url"])
+
+            else:
+                # Priority 3: auto-scan assets/ folder
+                asset_path = self._find_assets_image()
+
+                if asset_path:
+                    image_hash = self._upload_image(asset_path)
+                    logger.info("Uploaded assets image, hash: %s", image_hash)
+
+                elif cfg.get("image_path", "").strip():
+                    # Priority 4: explicit image_path in config
+                    img_path = cfg["image_path"].strip()
+                    if os.path.exists(img_path):
+                        image_hash = self._upload_image(img_path)
+                        logger.info("Uploaded image_path image, hash: %s", image_hash)
+                    else:
+                        logger.warning(
+                            "image_path '%s' not found. Add an image to assets/ or set "
+                            "image_url in ad_config.json. Proceeding without image — "
+                            "Meta may reject the creative.", img_path
+                        )
+
         if image_hash:
             link_data["image_hash"] = image_hash
 
