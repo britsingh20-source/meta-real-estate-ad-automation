@@ -47,16 +47,15 @@ class CampaignManager:
     # ─────────────────────────────────────────────────────────────────────────
 
     def create_campaign(self) -> str:
-        """Creates an OUTCOME_LEADS campaign and returns its ID."""
+        """Creates a LEAD_GENERATION campaign and returns its ID."""
         name = f"{self.ad_config['campaign_name_prefix']} | {datetime.now().strftime('%Y-%m-%d')}"
 
         campaign = self.client.retry(lambda: self.account.create_campaign(
             params={
                 Campaign.Field.name: name,
-                Campaign.Field.objective: "OUTCOME_LEADS",  # Updated from deprecated LEAD_GENERATION
+                Campaign.Field.objective: Campaign.Objective.lead_generation,
                 Campaign.Field.status: Campaign.Status.active,
                 Campaign.Field.special_ad_categories: [],
-                "is_adset_budget_sharing_enabled": False,   # Required when using adset-level budgets
             }
         ))
         campaign_id = campaign["id"]
