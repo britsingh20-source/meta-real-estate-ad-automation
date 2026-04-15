@@ -107,7 +107,7 @@ class CampaignManager:
 
         promoted_object = {
             "page_id": self.client.page_id,
-            "lead_gen_form_id": lead_form_id
+
         }
 
         bid_strategy = self.budget_rules.get("bid_strategy", "LOWEST_COST_WITHOUT_CAP")
