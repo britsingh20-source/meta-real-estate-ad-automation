@@ -9,9 +9,10 @@
 
   "cta_type": "GET_QUOTE",
 
-  "_image_note": "Provide EITHER image_hash (from an already-uploaded image) OR image_path (local file to upload). image_hash takes priority.",
+  "_image_note": "Priority: image_hash > image_url > assets/ folder (auto-scan) > image_path. EASIEST: just drop a .jpg/.jpeg/.png into the assets/ folder — it will be picked up automatically.",
   "image_hash": "",
-  "image_path": "assets/property_banner.jpg",
+  "image_url": "",
+  "image_path": "",
 
   "destination_url": "https://www.facebook.com/YOUR_PAGE_ID",
 
