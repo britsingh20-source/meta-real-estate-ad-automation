@@ -13,7 +13,8 @@
   },
   "vars": {
     "ENABLE_WRITES": "false",
-    "META_API_VERSION": ""
+    "META_API_VERSION": "v26.0",
+    "META_PAGE_ID": "1127522667114086"
   },
   "d1_databases": [
     {
