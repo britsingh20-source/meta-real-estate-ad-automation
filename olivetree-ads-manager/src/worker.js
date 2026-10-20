@@ -38,7 +38,7 @@ async function leadConnectionHealth(env){
    try{
     const recent=await graph(pageEnv,f.id+'/leads',{fields:'id,ad_id,created_time',limit:5});
     item.recentLeadCount=(recent.data||[]).length;
-    item.withAdId=(recent.data||[]).filter(l=>/^\\d+$/.test(String(l.ad_id||''))).length;
+    item.withAdId=(recent.data||[]).filter(l=>/^[0-9]+$/.test(String(l.ad_id||''))).length;
     item.withoutAdId=item.recentLeadCount-item.withAdId;
    }catch(e){item.error=e.message;}
    health.forms.push(item);
