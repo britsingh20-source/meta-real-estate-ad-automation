@@ -14,7 +14,10 @@
   "vars": {
     "ENABLE_WRITES": "false",
     "META_API_VERSION": "v26.0",
-    "META_PAGE_ID": "1127522667114086"
+    "META_PAGE_ID": "1127522667114086",
+    "WHATSAPP_ALERTS_ENABLED": "false",
+    "WHATSAPP_ALERT_TEMPLATE": "olive_new_enquiry",
+    "WHATSAPP_TEMPLATE_LANGUAGE": "en_US"
   },
   "d1_databases": [
     {
