@@ -67,6 +67,43 @@ async function leadConnectionHealth(env){
  await putState(env,'lead_connection_health',health);
 }
 
+function whatsappReady(env){
+ return env.WHATSAPP_ALERTS_ENABLED==='true'&&Boolean(env.WHATSAPP_ACCESS_TOKEN)&&/^[0-9]+$/.test(env.WHATSAPP_PHONE_NUMBER_ID||'')&&/^[1-9][0-9]{7,14}$/.test(env.WHATSAPP_ALERT_TO||'')&&/^[a-z0-9_]+$/.test(env.WHATSAPP_ALERT_TEMPLATE||'')&&/^[a-z]{2}_[A-Z]{2}$/.test(env.WHATSAPP_TEMPLATE_LANGUAGE||'')&&/^v[0-9]+\.0$/.test(env.META_API_VERSION||'');
+}
+function whatsappPayload(env){
+ return {messaging_product:'whatsapp',to:env.WHATSAPP_ALERT_TO,type:'template',template:{name:env.WHATSAPP_ALERT_TEMPLATE,language:{code:env.WHATSAPP_TEMPLATE_LANGUAGE}}};
+}
+async function processWhatsAppAlerts(env){
+ // Only verified, ad-linked CRM records enter this queue. No contact details are copied into an alert.
+ await env.DB.prepare("INSERT OR IGNORE INTO whatsapp_alert_jobs(lead_id,created_at,updated_at) SELECT id,?,? FROM leads WHERE ad_id<>'' AND ad_id NOT GLOB '*[^0-9]*'").bind(stamp(),stamp()).run();
+ if(!whatsappReady(env))return {status:'not_configured'};
+ const lock=await lease(env,'whatsapp_alerts',180000);if(!lock)return {status:'busy'};
+ try{
+  // A crashed/ambiguous request must not be automatically resent.
+  await env.DB.prepare("UPDATE whatsapp_alert_jobs SET status='uncertain',error='Interrupted send; verify with provider before retry',updated_at=? WHERE status='sending'").bind(stamp()).run();
+  const jobs=await rows(env,"SELECT lead_id,attempts FROM whatsapp_alert_jobs WHERE status IN ('pending','retry') AND next_attempt<=? AND attempts<5 ORDER BY created_at LIMIT 5",Date.now());
+  for(const job of jobs){
+   const today=await env.DB.prepare("SELECT count(*) AS count FROM whatsapp_alert_jobs WHERE status IN ('accepted','sending','uncertain') AND substr(updated_at,1,10)=?").bind(stamp().slice(0,10)).first();
+   if(Number(today?.count)>=20)break;
+   await env.DB.prepare("UPDATE whatsapp_alert_jobs SET status='sending',attempts=attempts+1,updated_at=? WHERE lead_id=?").bind(stamp(),job.lead_id).run();
+   try{
+    const res=await fetch('https://graph.facebook.com/'+env.META_API_VERSION+'/'+env.WHATSAPP_PHONE_NUMBER_ID+'/messages',{method:'POST',headers:{Authorization:'Bearer '+env.WHATSAPP_ACCESS_TOKEN,'Content-Type':'application/json'},body:JSON.stringify(whatsappPayload(env)),signal:AbortSignal.timeout(20000)});
+    const data=await res.json();
+    const messageId=data.messages?.[0]?.id;
+    if(res.ok&&typeof messageId==='string'){
+     await env.DB.prepare("UPDATE whatsapp_alert_jobs SET status='accepted',message_id=?,error=NULL,updated_at=? WHERE lead_id=?").bind(messageId,stamp(),job.lead_id).run();
+    }else{
+     const retry=res.status===429;
+     await env.DB.prepare("UPDATE whatsapp_alert_jobs SET status=?,next_attempt=?,error=?,updated_at=? WHERE lead_id=?").bind(retry?'retry':'failed',Date.now()+60000*2**job.attempts,'WhatsApp API rejected request ('+res.status+', code '+String(data.error?.code||'unknown')+')',stamp(),job.lead_id).run();
+    }
+   }catch{
+    await env.DB.prepare("UPDATE whatsapp_alert_jobs SET status='uncertain',error='Send outcome unknown; inspect provider before retry',updated_at=? WHERE lead_id=?").bind(stamp(),job.lead_id).run();
+   }
+  }
+  return {status:'processed'};
+ }finally{await release(env,'whatsapp_alerts',lock);}
+}
+
 async function sync(env){
  if(!ready(env))return {status:'blocked',reason:'Direct Meta authorisation required'};
  const lock=await lease(env,'sync');if(!lock)return {status:'busy'};
@@ -86,6 +123,7 @@ async function sync(env){
   await putState(env,'last_sync',stamp());
   await budgetGuard(env,account,metricNumber(total.spend));
   await processLeads(env);
+  try{await processWhatsAppAlerts(env);}catch(e){await record(env,'whatsapp_alert_error',null,{error:e.message});}
   try{await leadConnectionHealth(env);}catch(e){await record(env,'lead_diagnostic_error',null,{error:e.message});}
   await env.DB.prepare('UPDATE runs SET status=?,detail=? WHERE id=?').bind('success',JSON.stringify({ads:ads.length,days:daily.length}),run).run();
   return {status:'success',ads:ads.length};
@@ -157,7 +195,7 @@ async function dashboard(env){
  const ads=await rows(env,"SELECT o.id,o.name,o.status,o.managed,COALESCE(m.spend,0) AS spend,COALESCE(m.leads,0) AS leads FROM objects o LEFT JOIN metrics m ON m.object_id=o.id AND m.day=? AND m.level='ad' ORDER BY spend DESC",today);
  const stages=await rows(env,'SELECT stage,count(*) AS count FROM leads GROUP BY stage');
  const runs=await rows(env,'SELECT * FROM runs ORDER BY started_at DESC LIMIT 12');
- return {account:ACCOUNT,day:today,mode:await getState(env,'mode','observe'),connected:ready(env),writeEnabled:env.ENABLE_WRITES==='true',target:DAILY_LEAD_TARGET,budget:DAILY_BUDGET,lastSync:await getState(env,'last_sync'),totals:totals.length?assessment(totals):null,ads,stages,runs,briefs:await rows(env,'SELECT * FROM briefs ORDER BY at DESC LIMIT 3'),decisions:await rows(env,'SELECT * FROM decisions ORDER BY at DESC LIMIT 20'),competitors:await rows(env,'SELECT * FROM competitors ORDER BY observed_at DESC'),drafts:await rows(env,'SELECT * FROM drafts ORDER BY created_at DESC'),leadJobs:await rows(env,"SELECT status,count(*) AS count FROM lead_jobs GROUP BY status")};
+ return {whatsappAlerts:{configured:whatsappReady(env),enabled:env.WHATSAPP_ALERTS_ENABLED==='true',recipientLast4:(env.WHATSAPP_ALERT_TO||'').slice(-4),jobs:await rows(env,'SELECT status,count(*) AS count FROM whatsapp_alert_jobs GROUP BY status')},account:ACCOUNT,day:today,mode:await getState(env,'mode','observe'),connected:ready(env),writeEnabled:env.ENABLE_WRITES==='true',target:DAILY_LEAD_TARGET,budget:DAILY_BUDGET,lastSync:await getState(env,'last_sync'),totals:totals.length?assessment(totals):null,ads,stages,runs,briefs:await rows(env,'SELECT * FROM briefs ORDER BY at DESC LIMIT 3'),decisions:await rows(env,'SELECT * FROM decisions ORDER BY at DESC LIMIT 20'),competitors:await rows(env,'SELECT * FROM competitors ORDER BY observed_at DESC'),drafts:await rows(env,'SELECT * FROM drafts ORDER BY created_at DESC'),leadJobs:await rows(env,"SELECT status,count(*) AS count FROM lead_jobs GROUP BY status")};
 }
 async function brief(env){
  const lock=await lease(env,'brief',120000);if(!lock)return {status:'busy'};
