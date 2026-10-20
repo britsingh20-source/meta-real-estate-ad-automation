@@ -20,6 +20,26 @@ async function saveMetric(env,day,level,object,name,r){
  const leads=actionCount(r.actions,'lead'),conversations=actionCount(r.actions,'onsite_conversion.messaging_conversation_started_7d');
  await env.DB.prepare('INSERT INTO metrics(day,object_id,level,name,spend,leads,conversations,impressions,clicks,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,object_id,level) DO UPDATE SET name=excluded.name,spend=excluded.spend,leads=excluded.leads,conversations=excluded.conversations,impressions=excluded.impressions,clicks=excluded.clicks,synced_at=excluded.synced_at').bind(day,object,level,name,spend,leads,conversations,impressions,clicks,stamp()).run();
 }
+async function setupApprovedLeadSubscription(env){
+ if(await getState(env,'lead_subscription_setup_requested',false)!==true)return;
+ if(!env.META_PAGE_ACCESS_TOKEN||!env.META_APP_SECRET||String(env.META_PAGE_ID)!=='1127522667114086')throw new Error('Approved Page credentials unavailable');
+ const appId='1292772756319995';
+ const tokenInfo=await graph({...env,META_ACCESS_TOKEN:appId+'|'+env.META_APP_SECRET},'debug_token',{input_token:env.META_PAGE_ACCESS_TOKEN});
+ if(!tokenInfo.data?.is_valid||String(tokenInfo.data.app_id)!==appId)throw new Error('Page token does not belong to the approved app');
+ const pageEnv={...env,META_ACCESS_TOKEN:env.META_PAGE_ACCESS_TOKEN};
+ let apps=await list(pageEnv,env.META_PAGE_ID+'/subscribed_apps',{fields:'id,subscribed_fields'});
+ const own=apps.find(a=>String(a.id)===appId);
+ if(!own?.subscribed_fields?.includes('leadgen')){
+  const fields=[...new Set([...(own?.subscribed_fields||[]),'leadgen'])];
+  const result=await graph(pageEnv,env.META_PAGE_ID+'/subscribed_apps',{subscribed_fields:fields},'POST');
+  if(result.success!==true)throw new Error('Page subscription was not accepted');
+  apps=await list(pageEnv,env.META_PAGE_ID+'/subscribed_apps',{fields:'id,subscribed_fields'});
+  if(!apps.some(a=>String(a.id)===appId&&a.subscribed_fields?.includes('leadgen')))throw new Error('Page subscription not confirmed');
+ }
+ await putState(env,'lead_subscription_setup_requested',false);
+ await record(env,'lead_page_subscription_verified',env.META_PAGE_ID,{appId,field:'leadgen'});
+}
+
 async function leadConnectionHealth(env){
  if(!env.META_PAGE_ID||!env.META_PAGE_ACCESS_TOKEN)return;
  const pageEnv={...env,META_ACCESS_TOKEN:env.META_PAGE_ACCESS_TOKEN};
@@ -248,6 +268,7 @@ export default {
     return;
    }
    try{
+    try{await setupApprovedLeadSubscription(env);}catch(e){await record(env,'lead_subscription_setup_error',null,{error:e.message});}
     await sync(env);
     if(new Date().getUTCMinutes()<10&&env.META_PAGE_ACCESS_TOKEN)await reconcileLeads(env);
     const today=localDay();if(await getState(env,'brief_day')!==today){await brief(env);await putState(env,'brief_day',today);}
