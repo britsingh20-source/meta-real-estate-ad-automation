@@ -13,3 +13,6 @@ CREATE TABLE IF NOT EXISTS briefs (id TEXT PRIMARY KEY, at TEXT NOT NULL, conten
 CREATE TABLE IF NOT EXISTS drafts (id TEXT PRIMARY KEY, name TEXT NOT NULL, adset_id TEXT NOT NULL, post_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', meta_ad_id TEXT, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS lead_jobs_due ON lead_jobs(status,next_attempt);
 CREATE INDEX IF NOT EXISTS lead_stages ON leads(stage,created_at);
+
+CREATE TABLE IF NOT EXISTS whatsapp_alert_jobs (lead_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, next_attempt INTEGER NOT NULL DEFAULT 0, message_id TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS whatsapp_alert_due ON whatsapp_alert_jobs(status,next_attempt);
