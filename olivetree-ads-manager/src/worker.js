@@ -18,7 +18,7 @@ async function release(env,name,owner){await env.DB.prepare('DELETE FROM locks W
 async function saveMetric(env,day,level,object,name,r){
  const spend=metricNumber(r.spend),impressions=metricNumber(r.impressions),clicks=metricNumber(r.clicks);
  const leads=actionCount(r.actions,'lead'),conversations=actionCount(r.actions,'onsite_conversion.messaging_conversation_started_7d');
- await env.DB.prepare('INSERT INTO metrics VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,object_id,level) DO UPDATE SET name=excluded.name,spend=excluded.spend,leads=excluded.leads,conversations=excluded.conversations,impressions=excluded.impressions,clicks=excluded.clicks,synced_at=excluded.synced_at').bind(day,object,level,name,spend,leads,conversations,impressions,clicks,stamp()).run();
+ await env.DB.prepare('INSERT INTO metrics(day,object_id,level,name,spend,leads,conversations,impressions,clicks,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,object_id,level) DO UPDATE SET name=excluded.name,spend=excluded.spend,leads=excluded.leads,conversations=excluded.conversations,impressions=excluded.impressions,clicks=excluded.clicks,synced_at=excluded.synced_at').bind(day,object,level,name,spend,leads,conversations,impressions,clicks,stamp()).run();
 }
 async function sync(env){
  if(!ready(env))return {status:'blocked',reason:'Direct Meta authorisation required'};
