@@ -20,6 +20,33 @@ async function saveMetric(env,day,level,object,name,r){
  const leads=actionCount(r.actions,'lead'),conversations=actionCount(r.actions,'onsite_conversion.messaging_conversation_started_7d');
  await env.DB.prepare('INSERT INTO metrics(day,object_id,level,name,spend,leads,conversations,impressions,clicks,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,object_id,level) DO UPDATE SET name=excluded.name,spend=excluded.spend,leads=excluded.leads,conversations=excluded.conversations,impressions=excluded.impressions,clicks=excluded.clicks,synced_at=excluded.synced_at').bind(day,object,level,name,spend,leads,conversations,impressions,clicks,stamp()).run();
 }
+async function leadConnectionHealth(env){
+ if(!env.META_PAGE_ID||!env.META_PAGE_ACCESS_TOKEN)return;
+ const pageEnv={...env,META_ACCESS_TOKEN:env.META_PAGE_ACCESS_TOKEN};
+ const health={checkedAt:stamp(),pageId:env.META_PAGE_ID,expectedAppId:'1292772756319995'};
+ try{
+  const apps=await list(pageEnv,env.META_PAGE_ID+'/subscribed_apps',{fields:'id,subscribed_fields'});
+  const own=apps.find(a=>String(a.id)===health.expectedAppId);
+  health.pageSubscribed=Boolean(own);
+  health.leadgenSubscribed=Boolean(own?.subscribed_fields?.includes('leadgen'));
+ }catch(e){health.subscriptionError=e.message;}
+ try{
+  const forms=await list(pageEnv,env.META_PAGE_ID+'/leadgen_forms',{fields:'id,name,status'});
+  health.forms=[];
+  for(const f of forms.slice(0,20)){
+   const item={id:f.id,name:f.name,status:f.status};
+   try{
+    const recent=await graph(pageEnv,f.id+'/leads',{fields:'id,ad_id,created_time',limit:5});
+    item.recentLeadCount=(recent.data||[]).length;
+    item.withAdId=(recent.data||[]).filter(l=>/^\\d+$/.test(String(l.ad_id||''))).length;
+    item.withoutAdId=item.recentLeadCount-item.withAdId;
+   }catch(e){item.error=e.message;}
+   health.forms.push(item);
+  }
+ }catch(e){health.formsError=e.message;}
+ await putState(env,'lead_connection_health',health);
+}
+
 async function sync(env){
  if(!ready(env))return {status:'blocked',reason:'Direct Meta authorisation required'};
  const lock=await lease(env,'sync');if(!lock)return {status:'busy'};
@@ -39,6 +66,7 @@ async function sync(env){
   await putState(env,'last_sync',stamp());
   await budgetGuard(env,account,metricNumber(total.spend));
   await processLeads(env);
+  try{await leadConnectionHealth(env);}catch(e){await record(env,'lead_diagnostic_error',null,{error:e.message});}
   await env.DB.prepare('UPDATE runs SET status=?,detail=? WHERE id=?').bind('success',JSON.stringify({ads:ads.length,days:daily.length}),run).run();
   return {status:'success',ads:ads.length};
  }catch(e){await env.DB.prepare('UPDATE runs SET status=?,detail=? WHERE id=?').bind('failed',JSON.stringify({error:e.message}),run).run();throw e;}
