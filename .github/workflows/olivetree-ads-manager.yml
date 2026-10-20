@@ -1,0 +1,22 @@
+name: Olive Tree Ads Manager checks
+on:
+  push:
+    paths: ['olivetree-ads-manager/**', '.github/workflows/olivetree-ads-manager.yml']
+  pull_request:
+    paths: ['olivetree-ads-manager/**', '.github/workflows/olivetree-ads-manager.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: olivetree-ads-manager
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - run: npm run check

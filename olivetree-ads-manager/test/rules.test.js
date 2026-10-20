@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {ACCOUNT,localDay,metricNumber,actionCount,assessment,guardDecision,validateDraft} from '../src/rules.js';
+test('fixed account and India midnight',()=>{assert.equal(ACCOUNT,'464678014577329');assert.equal(localDay(new Date('2026-10-19T18:31:00Z')),'2026-10-20');});
+test('target maths and zero-lead CPL',()=>{assert.equal(assessment([{spend:250,leads:5}]).cpl,50);assert.equal(assessment([{spend:250,leads:5}]).needed,5);assert.equal(assessment([{spend:250,leads:0}]).cpl,null);});
+test('invalid metrics never become zero',()=>{for(const v of [null,undefined,'unavailable',-1,NaN,Infinity])assert.throws(()=>metricNumber(v));});
+test('messaging conversations are not leads',()=>{assert.equal(actionCount([{action_type:'onsite_conversion.messaging_conversation_started_7d',value:'10'}],'lead'),0);});
+const guard={mode:'budget_guard',currency:'INR',timezone:'Asia/Kolkata',spend:500,fresh:true,managed:true};
+test('pause requires managed ad, valid account, fresh data and explicit mode',()=>{assert.equal(guardDecision(guard).action,'pause');assert.equal(guardDecision({...guard,mode:'observe'}).action,'observe');assert.equal(guardDecision({...guard,fresh:false}).action,'block');assert.equal(guardDecision({...guard,currency:'USD'}).action,'block');assert.equal(guardDecision({...guard,managed:false}).action,'observe');});
+test('draft identifiers validated',()=>{assert.throws(()=>validateDraft({name:'Test',adset_id:'1',post_id:'javascript:alert(1)'}));assert.equal(validateDraft({name:'Test',adset_id:'1',post_id:'2_3'}).post_id,'2_3');});
