@@ -1,0 +1,37 @@
+{
+  "name": "olivetree-ads-manager",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true
+  },
+  "vars": {
+    "ENABLE_WRITES": "false",
+    "META_API_VERSION": "v26.0",
+    "META_PAGE_ID": "1127522667114086",
+    "WHATSAPP_ALERTS_ENABLED": "false",
+    "WHATSAPP_ALERT_TEMPLATE": "olive_new_enquiry",
+    "WHATSAPP_TEMPLATE_LANGUAGE": "en_US"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "olivetree-ads-manager",
+      "database_id": "61f5ab00-2c35-4337-9db0-d1bae994c790"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "triggers": {
+    "crons": [
+      "*/10 * * * *"
+    ]
+  }
+}

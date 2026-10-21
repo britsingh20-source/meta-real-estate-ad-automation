@@ -1,0 +1,15 @@
+{
+  "name": "olivetree-ads-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/worker.js && node --check src/rules.js && node --check src/meta.js && node --check src/ui.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
